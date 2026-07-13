@@ -9,6 +9,54 @@ const app = new App({
     socketMode: true
 });
 
+const WEATHER_CODES = {
+    0: '☀️ Clear',
+    1: '🌤️ Mostly Clear',
+    2: '⛅ Partly Cloudy',
+    3: '☁️ Overcast',
+    45: '🌫️ Foggy',
+    48: '🌫️ Foggy',
+    51: '🌦️ Light Drizzle',
+    53: '🌦️ Drizzle',
+    55: '🌧️ Heavy Drizzle',
+    56: '🌧️ Freezing Drizzle',
+    57: '🌧️ Heavy Freezing Drizzle',
+    61: '🌦️ Light Rain',
+    63: '🌧️ Rain',
+    65: '🌧️ Heavy Rain',
+    66: '🌧️ Freezing Rain',
+    67: '🌧️ Heavy Freezing Rain',
+    71: '🌨️ Light Snow',
+    73: '❄️ Snow',
+    75: '❄️ Heavy Snow',
+    77: '🌨️ Snow Grains',
+    80: '🌦️ Rain Showers',
+    81: '🌧️ Heavy Rain Showers',
+    82: '⛈️ Violent Rain Showers',
+    85: '🌨️ Snow Showers',
+    86: '❄️ Heavy Snow Showers',
+    95: '⛈️ Thunderstorm',
+    96: '⛈️ Thunderstorm with Hail',
+    99: '⛈️ Severe Thunderstorm'
+};
+
+async function obtainGeoCode(location) {
+    const url = 'https://geocoding-api.open-meteo.com/v1/search';
+
+    const response = await axios.get(url, {
+        params: {
+            name: location,
+            count: 1
+        }
+    });
+
+    if (!response.data.results) {
+        throw new Error('Invalid Location.');
+    }
+
+    return response.data.results[0];
+}
+
 app.command('/chefcurry-help', async({ack,respond}) => {
     await ack();
     await respond({
@@ -50,6 +98,35 @@ app.command("/chefcurry-joke", async ({ ack, respond }) => {
   } catch (err) {
     await respond({ text: "Failed to fetch a joke." });
   }
+});
+
+app.command('/chefcurry-weather', async({command, ack,respond}) => {
+    await ack();    
+
+    try {
+        const place = await obtainGeoCode(command.text);
+        const response = await axios.get('https://api.open-meteo.com/v1/forecast', {
+            params: {
+                latitude: place.latitude,
+                longitude: place.longitude,
+                current: 'temperature_2m,relative_humidity_2m,weather_code',
+                daily: 'temperature_2m_max,temperature_2m_min',
+                forecast_days: 1,
+                timezone: 'auto'
+            }
+        });
+
+        await respond({text:
+            `*${place.name}, ${place.country}*
+Current: ${response.data.current.temperature_2m}°C
+Today's High: ${response.data.daily.temperature_2m_max[0]}°C
+Today's Low: ${response.data.daily.temperature_2m_min[0]}°C
+Humidity: ${response.data.current.relative_humidity_2m}%
+Condition: ${WEATHER_CODES[response.data.current.weather_code] ?? 'Unknown'}`
+        });
+    } catch (err) {
+        await respond({text: `Location is not valid. Please try again.`})
+    }
 });
 
 (async() => {
