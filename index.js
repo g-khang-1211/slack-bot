@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const { App } = require("@slack/bolt");
+const { evaluate } = require('mathjs');
 const axios = require('axios'); 
 
 const app = new App({ 
@@ -62,9 +63,11 @@ app.command('/chefcurry-help', async({ack,respond}) => {
     await respond({
         text:
         `Available Commands:
-        /chefcurry-help: List out all the commands and their functionality.
-        /chefcurry-ping: Check bot's latency.
-        /chefcurry-catfact: Get a random cat fact`
+\`/chefcurry-help:\` List out all the commands and their functionality.
+\`/chefcurry-ping:\` Check bot's latency.
+\`/chefcurry-catfact:\` Get a random cat fact
+\`/chefcurry-weather (location):\` Obtain the current weather data of selected location.
+\`/chefcurry-calculate (expression):\` Perform inputted mathematical operation.`
     });
 });
 
@@ -118,15 +121,37 @@ app.command('/chefcurry-weather', async({command, ack,respond}) => {
 
         await respond({text:
             `*${place.name}, ${place.country}*
-Current: ${response.data.current.temperature_2m}°C
-Today's High: ${response.data.daily.temperature_2m_max[0]}°C
-Today's Low: ${response.data.daily.temperature_2m_min[0]}°C
-Humidity: ${response.data.current.relative_humidity_2m}%
-Condition: ${WEATHER_CODES[response.data.current.weather_code] ?? 'Unknown'}`
+*Current:* ${response.data.current.temperature_2m}°C
+*Today's High:* ${response.data.daily.temperature_2m_max[0]}°C
+*Today's Low:* ${response.data.daily.temperature_2m_min[0]}°C
+*Humidity:* ${response.data.current.relative_humidity_2m}%
+*Condition:* ${WEATHER_CODES[response.data.current.weather_code] ?? 'Unknown'}`
         });
     } catch (err) {
         await respond({text: `Location is not valid. Please try again.`})
     }
+});
+
+app.command('/chefcurry-calculate', async({command, ack, respond}) => {
+    await ack();
+    
+    try {
+        const expression = command.text.trim();
+        if (!expression) {
+            await respond({text: `Enter a mathematical expression (e.g. 2+3, sin(45, sqrt(9), etc.)`});
+            return;
+        }
+
+        const result = evaluate(expression);
+
+        await respond({text: 
+            `*Calculation*
+*Expression:* \`${expression}\`
+*Result:* ${result}`
+        });
+    } catch (err) {
+        await respond({text: `Invalid mathematical equation. Please try again.`})
+    } 
 });
 
 (async() => {

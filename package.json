@@ -21,6 +21,7 @@
   "dependencies": {
     "@slack/bolt": "^4.7.3",
     "axios": "^1.18.1",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "mathjs": "^15.2.0"
   }
 }
