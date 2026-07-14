@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 const { App } = require("@slack/bolt");
-const { evaluate } = require('mathjs');
+const { evaluate, corr } = require('mathjs');
 const axios = require('axios'); 
 
 const app = new App({ 
@@ -67,7 +67,9 @@ app.command('/chefcurry-help', async({ack,respond}) => {
 \`/chefcurry-ping:\` Check bot's latency.
 \`/chefcurry-catfact:\` Get a random cat fact
 \`/chefcurry-weather (location):\` Obtain the current weather data of selected location.
-\`/chefcurry-calculate (expression):\` Perform inputted mathematical operation.`
+\`/chefcurry-calculate (expression):\` Perform inputted mathematical operation.
+\`/chefcurry-trivia:\` Starts a trivia game.
+\`/chefcurry-trivia-reset:\` Resets the trivia game. Voids the current game.`
     });
 });
 
@@ -154,7 +156,101 @@ app.command('/chefcurry-calculate', async({command, ack, respond}) => {
     } 
 });
 
+const questions = [
+  { q: "What is the closest planet to the Sun?", a: "mercury" },
+  { q: "Which galaxy is home to our Solar System?", a: "milky way" }, 
+  { q: "What is the largest planet in our solar system?", a: "jupiter" },
+  { q: "What is the hottest planet in our solar system?", a: "venus" },
+  { q: "What force keeps the planets in orbit around the sun?", a: "gravity" },
+  { q: "What is the name of the first human-made satellite launched into space?", a: "sputnik" },
+  { q: "Which planet is known as the Red Planet?", a: "mars" },
+  { q: "What is the approximate age of the universe in billions of years? (Just the number)", a: "14" },
+  { q: "What color is a newborn star usually?", a: "blue" },
+  { q: "What is the name of the largest moon of Saturn?", a: "titan" },
+  { q: "Which element makes up about 75% of the universe's elemental mass?", a: "hydrogen" },
+  { q: "What is the boundary surrounding a black hole from which nothing can escape?", a: "event horizon" },
+  { q: "What is the name of our closest neighboring spiral galaxy?", a: "andromeda" },
+  { q: "Which planet has supersonic winds that blow backward?", a: "neptune" },
+  { q: "What is the name of NASA's famous space telescope launched in 1990?", a: "hubble" },
+  { q: "What type of star is our Sun?", a: "yellow dwarf" },
+  { q: "What is the term for a meteor that survives its passage through the atmosphere and hits the ground?", a: "meteorite" },
+  { q: "Which planet has a giant storm called the Great Red Spot?", a: "jupiter" },
+  { q: "Who was the first person to step onto the moon?", a: "neil armstrong" },
+  { q: "What is the name of the constellation that looks like a winged horse?", a: "pegasus" }
+];
+
+const trivia = {
+    active: false,
+    played: [],
+    current: -1,
+    question: '',
+    answer: ''
+}
+
+app.command('/chefcurry-trivia', async({ack, respond}) => {
+    await ack();
+    if (trivia.active) {
+        await respond({
+            text:
+            `A trivia game has already started. Please answer the question. Alternatively, you may use \`/chefcurry-trivia-reset\` to restart the game.`
+        });
+        return;
+    }
+    
+    trivia.active = true;
+    if (trivia.played.length === questions.length) {
+        trivia.played = [];
+    }
+
+    do {
+        trivia.current = Math.floor(Math.random() * questions.length);
+    } while (trivia.played.includes(trivia.current));
+
+    trivia.played.push(trivia.current);
+    trivia.answer = questions[trivia.current].a;
+    trivia.question = questions[trivia.current].q;
+
+    await respond({
+        response_type: 'in_channel',
+        text: `*Trivia question:* ${trivia.question}`
+    });
+});
+
+app.message(async({message, say})=> {
+    if (!trivia.active || message.bot_id || !message.text) return;
+
+    const userAnswer = message.text.trim().toLowerCase();
+
+    if (userAnswer === trivia.answer.toLowerCase()) {
+        const winner = `<@${message.user}>`;
+        trivia.active = false;
+        await say(`🎊Correct! ${winner} got it right. The answer was \`${trivia.answer}\`!`);
+    } else {
+        await say(`❌Incorrect! \`${userAnswer}\` is not correct. Please try again.`);
+    }
+});
+
+app.command('/chefcurry-trivia-reset', async({ack, respond}) => {
+    await ack();
+
+    trivia.active = false;
+    trivia.played = [];
+    trivia.current = -1;
+    trivia.question = '';
+    trivia.answer = '';
+
+    await respond({text: `Trivia game has been reset. Current game has been voided.`});
+
+});
+
+
+
 (async() => {
     await app.start();
+    trivia.active = false;
+    trivia.played = [];
+    trivia.current = -1;
+    trivia.question = '';
+    trivia.answer = '';
     console.log(`bot is running`);
 })();
