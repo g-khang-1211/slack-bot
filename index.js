@@ -176,7 +176,8 @@ const questions = [
   { q: "What is the term for a meteor that survives its passage through the atmosphere and hits the ground?", a: "meteorite" },
   { q: "Which planet has a giant storm called the Great Red Spot?", a: "jupiter" },
   { q: "Who was the first person to step onto the moon?", a: "neil armstrong" },
-  { q: "What is the name of the constellation that looks like a winged horse?", a: "pegasus" }
+  { q: "What is the name of the constellation that looks like a winged horse?", a: "pegasus" },
+  {q: "Who's the greatest basketball player of all time?", a: "stephen curry"}
 ];
 
 const trivia = {
